@@ -1,0 +1,28 @@
+# 依赖与构建产物
+node_modules/
+.env
+.env.local
+
+# 运行时数据（不进仓库）
+ai/
+cards/
+output/
+final/
+assets/*.jpg
+assets/*.png
+_test_src/
+_test_assemble/
+*.zip
+post.json
+
+# 单次任务的文案产物
+小红书文案.md
+build_cards.py
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+__pycache__/
+*.pyc
