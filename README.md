@@ -1,6 +1,6 @@
 # Rednote-skill
 
-把任意帖子（链接或正文）一键转成小红书图文：**3 张竖版图 + 1 段 180 字文案 + 1 条置顶首评**。
+把任意帖子（链接或正文）一键转成小红书图文：**3 张竖版图 + 标题 + 正文**，标题和正文直接给在对话里。
 
 给 Claude Code、Codex、DSH 以及任何支持自定义 skill 的 agent 用。
 
@@ -15,6 +15,8 @@
 - 正文 600 字，塞满 CVE 编号和技术名词——**读者不是同行**
 - 封面是一块纯色背景加两行字——**像 PPT，没人点**
 - 把原帖的"世纪级大漏洞"直接抄进图里——**事实是错的**
+- 把模型对比图重新画了一遍——**原帖里最有价值的真实画面没了**
+- 正文开头写"发帖的博主说"——**把自己降级成了搬运工**
 
 这套 skill 把这些判断固化成流程，让 agent 每次都从"展开引用链 + 核事实"开始。
 
@@ -64,8 +66,9 @@ final/
 ├── 03-收束.jpg
 ├── 预览.jpg
 └── 小红书图文.zip
-小红书文案.md        标题 / 正文 / 置顶首评 / 标签 / 自查表
 ```
+
+标题和正文**写在对话里**，不生成 md 文档；核对、自查、来源全部在内部完成，不交付。
 
 ---
 
@@ -74,13 +77,15 @@ final/
 ```
 SKILL.md                      主流程（6 步）
 references/
-├── content-sourcing.md       抓帖子、展开引用链、被墙怎么办
-├── copywriting.md            句式模板、降维词表、黑名单、改写实例
+├── content-sourcing.md       抓帖子、展开引用链、截帧裁剪
+├── copywriting.md            句式模板、降维词表、黑名单、不提原帖
 ├── cover-design.md           封面构图、密度规则、双钩子
-├── image-prompts.md          提示词公式、负向约束、翻车对策
+├── image-prompts.md          提示词公式、原帧参考图、翻车对策
 └── case-study.md             一次完整实战的 9 个坑
 scripts/
+├── fetch-hot.mjs             拉热门流（推荐 / 分类），可抓正文
 ├── fetch-post.mjs            抓帖子，自动展开引用链
+├── ref-frames.py             从原图/原视频抽关键帧、裁剪成参考图
 ├── imagen.mjs                批量出图，自动纠正扩展名
 └── assemble.py               压尺寸、拼预览、打包
 examples/
@@ -89,7 +94,25 @@ examples/
 
 ---
 
-## 三个脚本
+## 五个脚本
+
+### fetch-hot.mjs
+
+```bash
+node scripts/fetch-hot.mjs                       # 推荐流，按点赞排序
+node scripts/fetch-hot.mjs --channel 美食 --limit 10
+node scripts/fetch-hot.mjs --detail 3 --json --out hot.json
+```
+
+免登录拉小红书首屏热门流（推荐 + 11 个分类），按点赞排序输出标题 / 作者 / 点赞 / 链接，
+`--detail N` 再抓前 N 条的正文。
+
+> 为什么能免登录：`/explore` 的 SSR 会把首屏 feed 写进 `window.__INITIAL_STATE__`，
+> 但只在对的请求头下才吐 —— 实测必须同时带 `user-agent` 和 `accept-encoding: gzip, deflate, br`，
+> 少一个就退化成 36KB 空壳（feeds=0）。
+>
+> 限制：一次只有 ~25–34 条，翻页要 x-s 签名，脚本不做；搜索/关注需登录。
+> 想要更多就换 channel 或重复拉（推荐流每次都不一样）。
 
 ### fetch-post.mjs
 
@@ -101,6 +124,15 @@ node scripts/fetch-post.mjs 1234567890 --json --out post.json
 自动展开引用链（最多 3 层），输出带层级的 markdown。
 
 > 为什么需要它：社媒上大量"爆款"只是转发，真正的内容在被引用的帖子里。手工挖容易漏。
+
+### ref-frames.py
+
+```bash
+python scripts/ref-frames.py --video src.mp4 --at 6 --crop 0,0,1296,620 --name opus --out-dir refs/
+python scripts/ref-frames.py --image poster.jpg --crop 120,300,800,600 --name poster --out-dir refs/
+```
+
+从视频/图片里抽出能证明结论的画面，裁掉标签水印，作为参考图传给生图模型。需要 opencv。
 
 ### imagen.mjs
 
@@ -131,13 +163,15 @@ python scripts/assemble.py --src out/ --dst final/ --names 01-封面,02-对比,0
 | --- | --- |
 | 先展开引用链 | 只抓最外层，八成拿不到素材 |
 | 先核事实再动笔 | 事实错了，图做得再好也是负资产 |
+| 原帧优先 | 能证明结论的画面裁下来当参考图，别重画 |
 | 3 张图 | 上限 5 张。图承担信息，文案只打一个点 |
-| 180 字 | 150–220 字之间，短句，大量换行 |
+| 150–220 字 | 短句，大量换行，只打一个反差 |
 | 封面要填满 | 大字 + 人物 + 道具 + 散点，四边铺满 |
 | 封面 ≠ 标题 | 两个入口打两个点，别浪费一半流量 |
 | 图 3 讲故事 | 不是技术总结，不是知识点 |
 | 名人用本名 | "某国首相"会把情绪抽干 |
-| 技术细节进评论区 | 正文说人话，置顶首评承接专业度 |
+| 不提原帖 | 用我们自己的话讲，别把自己降级成搬运工 |
+| 交付只有标题 + 正文 | 不写 md、不写核对表、不写首评 |
 | 留缺口不留错误 | 让人来补充，别让人来纠错 |
 
 ---

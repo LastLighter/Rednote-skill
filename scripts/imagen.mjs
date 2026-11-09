@@ -16,7 +16,8 @@
  */
 
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { resolve, dirname, join, basename, extname, homedir } from "node:path";
+import { resolve, dirname, join, basename, extname } from "node:path";
+import { homedir } from "node:os";
 
 const POLL_MS = 2500;
 const MAX_CONCURRENCY = 8;

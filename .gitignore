@@ -14,10 +14,16 @@ _test_src/
 _test_assemble/
 *.zip
 post.json
+data/
+out/
 
 # 单次任务的文案产物
 小红书文案.md
 build_cards.py
+
+# 一次性探测脚本（不入库）
+scripts/_*.mjs
+scripts/_*.py
 
 # 系统与编辑器
 .DS_Store
