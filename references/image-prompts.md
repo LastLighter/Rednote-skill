@@ -96,7 +96,7 @@
 node scripts/imagen.mjs \
   --prompt-file prompts/01-cover.md \
   --out-dir out/ \
-  --ref assets/persona.jpg \
+  --ref .rednote/avatar.png \
   --ref refs/opus.png --ref refs/deepseek.png \
   --ratio 3:4 --tier 2k
 ```
@@ -108,6 +108,8 @@ node scripts/imagen.mjs \
 ```
 
 不要复述参考图里所有细节，一句"保持一致"即可。
+
+人设图取自 `.rednote/avatar.png`（见 `account-profile.md`）。档案里没有头像、走排版路线时，这一段和 `--ref` 一起删掉——不要临时生成一张脸硬凑，每篇换一张脸等于没有账号。
 
 ### 6.2 原帧（真实感的关键）
 
